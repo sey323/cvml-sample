@@ -1,0 +1,27 @@
+#Auther:Seiichirou Nomura
+#data:20170427
+
+#画像データ
+*.c2d
+*.jpg
+*.JPG
+*.png
+*.tiff
+
+#ファイルデータ
+*.xml
+*.yml
+*.dat
+*.txt
+
+#バックアップ
+*~
+.DS_Store
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+*.o
+*.out

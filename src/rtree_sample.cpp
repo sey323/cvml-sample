@@ -18,7 +18,7 @@ using namespace cv;
 
 void count_row_col( const char* , int*, int*);
 struct TRAIN_DATA *load_to_train( const char* );
-CvRTrees *cvrtrees_data_make( const struct TRAIN_DATA* );
+void cvtrees_data_make( const struct TRAIN_DATA* , const char*);
 int libsvm_predict( const struct TRAIN_DATA*, const CvRTrees* );
 
 //学習データ保存用の構造体
@@ -105,8 +105,8 @@ struct TRAIN_DATA *load_to_train( const char *train_filename ){
 /*
 *特徴量から学習データの作成
 */
-CvRTrees *cvrtrees_data_make( const struct TRAIN_DATA *t_data ){
-  CvRTrees rtree;
+void cvtrees_data_make( const struct TRAIN_DATA *t_data , const char *save_filename ){
+  CvRTrees model;
   //素性データ数
   int train_num = t_data[0].train_num;
   int data_num = t_data[0].data_num;
@@ -118,37 +118,36 @@ CvRTrees *cvrtrees_data_make( const struct TRAIN_DATA *t_data ){
 
   for( int i = 0 ; i < train_num; i++){
     //ラベルをふる
-    training_label.at<float>(i , 0) = t_data[i]->label;
+    training_label.at<float>(i , 0) = t_data[i].label;
     for( int j = 0; j < data_num; j++){
-      training_label.at<float>(i , j) = t_data[i]->data[j];
+      training_data.at<float>(i , j) = t_data[i].data[j];
     }
   }
 
   //学習する
   cout << "Ready to train ..." << endl;
-  rtree.train(training_data,  CV_ROW_SAMPLE , training_label);
+  model.train(training_data,  CV_ROW_SAMPLE , training_label);
   cout << "Finished ..." << endl;
 
-  return model;
+  // 学習結果のファイル出力
+  model.save( save_filename );
 }
 
 /*
 *libsvmによる検定
 */
-int libsvm_predict( const struct TRAIN_DATA *t_data , const svm_model *model ){
+int cvtrees_predict( const struct TRAIN_DATA *t_data , const CvRTrees *model ){
   int data_num = t_data->data_num;
-  svm_node test[ data_num ];
+  Mat test( data_num , 1 , CV_32FC1 );
 
   cout << "predict training samples ..." << endl;
 
   for( int i = 0 ; i < data_num; i++){
-    test[i].index = i;
-    test[i].value = t_data->data[i];
+    test.at<float>( i , 0 ) = t_data->data[i];
   }
-  test[data_num].index = -1;
 
-  // libsvmによるpredict
-  const auto result = static_cast<int>( svm_predict( model, test ) );
+  // opencvによるpredict
+  const auto result = static_cast<int>( model->predict( test )  );
 
   return result;
 }
@@ -158,20 +157,20 @@ int libsvm_predict( const struct TRAIN_DATA *t_data , const svm_model *model ){
 */
 int main(int argc, char* argv[])
 {
-  char train_filename[248] , svm_filename[248];
+  char train_filename[248] , save_filename[248];
 
   //コンソール入力をpathに代入
   strcpy( train_filename, argv[ 1 ] );
-  strcpy( svm_filename , argv[ 2 ] );
+  strcpy( save_filename , argv[ 2 ] );
 
   //CSVファイルから学習データを作成
   struct TRAIN_DATA* t_data;
-  t_data = load_to_train( train_filename );
+  t_data = load_to_train( train_filename);
 
   //学習データの作成
-  svm_model* model = libsvm_data_make( t_data );
-  // 学習結果のファイル出力
-  svm_save_model( svm_filename , model );
+  CvRTrees model;
+  cvtrees_data_make( t_data , save_filename);
+  model.load( save_filename );
 
   //テスト用データの作成
   struct TRAIN_DATA* test;
@@ -179,18 +178,17 @@ int main(int argc, char* argv[])
   test->data = (double*)malloc( sizeof(double) * 10);
   test->data_num = 10;
   for(int j = 0; j < 10 ; j++){
-    test->data[j] = 0.4;
+    test->data[j] = 0.6;
   }
 
   //予測
-  int result = libsvm_predict( test , model );
+  int result = cvtrees_predict( test , &model );
   cout << "done" << endl;
   cout << "RESULT : correct =" << result << endl;
 
   // 後始末
   free(t_data);
   free(test);
-  svm_free_and_destroy_model( &model );
 
   return 0;
 }
