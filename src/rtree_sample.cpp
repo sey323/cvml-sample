@@ -7,6 +7,7 @@
 #include<iostream>
 #include<fstream>
 #include<string>
+#include<cstring>
 #include<stdlib.h>
 #include<sstream> //文字ストリーム
 
@@ -134,7 +135,7 @@ void cvtrees_data_make( const struct TRAIN_DATA *t_data , const char *save_filen
 }
 
 /*
-*libsvmによる検定
+*ランダムフォレストによる検定
 */
 int cvtrees_predict( const struct TRAIN_DATA *t_data , const CvRTrees *model ){
   int data_num = t_data->data_num;
